@@ -8,6 +8,8 @@ import Turmas from "./pages/Turmas"
 import Notas from "./pages/Notas"
 import Auth from "./pages/Auth"
 import Agenda from "./pages/Agenda"
+// import Comunicacao from "./pages/Comunicacao"
+
 
 function App() {
   return (
@@ -24,6 +26,7 @@ function App() {
           <Route path="turmas" element={<Turmas />} />
           <Route path="notas" element={<Notas />} />
           <Route path="agenda" element={<Agenda />} />
+          {/* <Route path="comunicacao" element={<Comunicacao />} /> */}
           
         </Route>
       </Routes>
