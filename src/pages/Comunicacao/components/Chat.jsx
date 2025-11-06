@@ -1,7 +1,7 @@
 // src/pages/Comunicacao/components/Chat.jsx
 
 import React, { useState } from 'react';
-import { Search, Send, Paperclip, Smile, Check, CheckCheck, Clock, Image as ImageIcon } from 'lucide-react';
+import { Search, Send, Paperclip, Smile, Check, CheckCheck, Clock, Image as ImageIcon, MessageSquare  } from 'lucide-react';
 
 const Chat = () => {
   const [conversaSelecionada, setConversaSelecionada] = useState(null);
