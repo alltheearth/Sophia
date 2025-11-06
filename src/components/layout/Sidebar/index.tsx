@@ -1,10 +1,12 @@
 import { BarChart3, BookOpen, Calendar, DollarSign, GraduationCap, MessageSquare, Users } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Sidebar = () => {
 
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [userRole] = useState('GESTOR'); // Pode ser: SUPERUSER, GESTOR, COORDENADOR, PROFESSOR, RESPONSAVEL
+    const navigate = useNavigate()
       
     const user = {
     nome: 'Maria Silva',
