@@ -34,8 +34,8 @@ const Sidebar = () => {
             <div className="p-6 flex items-center justify-between border-b border-blue-500/30">
                 {sidebarOpen ? (
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                            <BookOpen className="w-6 h-6 text-white" />
+                        <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                            <img src="/images/logo-sophia.png" className="w-10 h-10" />
                         </div>
                         <div>
                             <h1 className="text-xl font-bold">Sophia</h1>
@@ -43,8 +43,8 @@ const Sidebar = () => {
                         </div>
                     </div>
                 ) : (
-                    <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center backdrop-blur-sm mx-auto">
-                        <BookOpen className="w-6 h-6 text-white" />
+                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center backdrop-blur-sm mx-auto">
+                        <img src="/images/logo-sophia.png" className="w-10 h-10" />
                     </div>
                 )}
                 {sidebarOpen && (
