@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { BarChart3, Users, BookOpen, GraduationCap, DollarSign, Calendar, MessageSquare, Bell, Search, Menu, ChevronDown, TrendingUp, TrendingDown, Clock, CheckCircle } from 'lucide-react';
+
+import { Users, BookOpen, GraduationCap, Calendar, TrendingUp, TrendingDown, Clock, CheckCircle } from 'lucide-react';
 
 const Dashboard = () => {
-  const [userRole] = useState('GESTOR'); // Pode ser: SUPERUSER, GESTOR, COORDENADOR, PROFESSOR, RESPONSAVEL
 
      const user = {
     nome: 'Maria Silva',
@@ -82,21 +81,9 @@ const Dashboard = () => {
     { title: 'Formatura 5º Ano', date: '20 Nov', time: '19:30' }
   ];
 
-  const menuItems = [
-    { icon: BarChart3, label: 'Dashboard', active: true, roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR'] },
-    { icon: Users, label: 'Alunos', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
-    { icon: GraduationCap, label: 'Professores', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR'] },
-    { icon: BookOpen, label: 'Turmas', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
-    { icon: BarChart3, label: 'Notas', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
-    { icon: Calendar, label: 'Agenda', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
-    { icon: DollarSign, label: 'Financeiro', roles: ['SUPERUSER', 'GESTOR'] },
-    { icon: MessageSquare, label: 'Comunicação', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] }
-  ];
-
-  const visibleMenuItems = menuItems.filter(item => item.roles.includes(userRole));
 
   return (
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="p-6">
           {/* Welcome Section */}
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-gray-800">Olá, {user.nome.split(' ')[0]}! 👋</h2>
