@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Eye, Edit, Grid, List, User, Phone, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const ListaAlunos = ({ alunos, totalAlunos, onVerDetalhes, onEditar }) => {
+const ListaAlunos = ({ alunos, totalAlunos, onVerDetalhes, onEditar, loading }) => {
   const [visualizacao, setVisualizacao] = useState('grid'); // 'grid' ou 'list'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
@@ -13,6 +13,25 @@ const ListaAlunos = ({ alunos, totalAlunos, onVerDetalhes, onEditar }) => {
   const endIndex = startIndex + itemsPerPage;
   const alunosAtuais = alunos.slice(startIndex, endIndex);
 
+    if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-gray-600">Carregando alunos...</p>
+      </div>
+    );
+  }
+
+  if (alunos.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-12 text-center">
+        <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-800 mb-2">Nenhum aluno encontrado</h3>
+        <p className="text-gray-600">Tente ajustar os filtros ou cadastre um novo aluno.</p>
+      </div>
+    );
+  }
+  
   const goToPage = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);

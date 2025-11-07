@@ -1,127 +1,69 @@
-// src/pages/Alunos/index.jsx
-
-import React, { useState } from 'react';
-import { Users, Plus, Download, Upload } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Plus, Download, Upload, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { alunosApi, Aluno } from '../../services/alunosApi';
 import ListaAlunos from './components/ListaAlunos';
 import FiltrosAlunos from './components/FiltrosAlunos';
 import CadastroAlunoModal from './modals/CadastroAluno';
 import DetalhesAlunoModal from './modals/DetalhesAluno';
 
 const Alunos = () => {
+  const { escola } = useAuth();
+  const [alunos, setAlunos] = useState<Aluno[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [showCadastroModal, setShowCadastroModal] = useState(false);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
-  const [alunoSelecionado, setAlunoSelecionado] = useState(null);
+  const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
   const [filtros, setFiltros] = useState({
     searchTerm: '',
     turma: 'TODAS',
     status: 'ATIVO',
-    serie: 'TODAS'
+    turno: 'TODOS'
   });
 
-  // Dados mockados - virão da API
-  const alunos = [
-    {
-      id: 1,
-      nome: 'Ana Carolina Silva',
-      matricula: '2024001',
-      foto: null,
-      dataNascimento: '2014-05-15',
-      idade: 10,
-      turma: '5º Ano A',
-      turno: 'MATUTINO',
-      status: 'ATIVO',
-      responsaveis: [
-        { nome: 'Maria Silva', parentesco: 'Mãe', telefone: '(11) 98765-4321', email: 'maria@email.com' }
-      ],
-      endereco: 'Rua das Flores, 123',
-      cpf: '123.456.789-00',
-      rg: '12.345.678-9'
-    },
-    {
-      id: 2,
-      nome: 'Pedro Henrique Santos',
-      matricula: '2024002',
-      foto: null,
-      dataNascimento: '2016-08-22',
-      idade: 8,
-      turma: '3º Ano B',
-      turno: 'VESPERTINO',
-      status: 'ATIVO',
-      responsaveis: [
-        { nome: 'João Santos', parentesco: 'Pai', telefone: '(11) 97654-3210', email: 'joao@email.com' }
-      ],
-      endereco: 'Av. Principal, 456',
-      cpf: '987.654.321-00',
-      rg: '98.765.432-1'
-    },
-    {
-      id: 3,
-      nome: 'Juliana Oliveira Costa',
-      matricula: '2024003',
-      foto: null,
-      dataNascimento: '2018-03-10',
-      idade: 6,
-      turma: '1º Ano C',
-      turno: 'MATUTINO',
-      status: 'ATIVO',
-      responsaveis: [
-        { nome: 'Carlos Costa', parentesco: 'Pai', telefone: '(11) 96543-2109', email: 'carlos@email.com' }
-      ],
-      endereco: 'Rua da Paz, 789',
-      cpf: '456.789.123-00',
-      rg: '45.678.912-3'
-    },
-    {
-      id: 4,
-      nome: 'Lucas Gabriel Ferreira',
-      matricula: '2024004',
-      foto: null,
-      dataNascimento: '2016-11-30',
-      idade: 8,
-      turma: '2º Ano A',
-      turno: 'MATUTINO',
-      status: 'ATIVO',
-      responsaveis: [
-        { nome: 'Fernanda Ferreira', parentesco: 'Mãe', telefone: '(11) 95432-1098', email: 'fernanda@email.com' }
-      ],
-      endereco: 'Rua do Sol, 321',
-      cpf: '321.654.987-00',
-      rg: '32.165.498-7'
-    },
-    {
-      id: 5,
-      nome: 'Beatriz Almeida Rocha',
-      matricula: '2024005',
-      foto: null,
-      dataNascimento: '2015-07-18',
-      idade: 9,
-      turma: '4º Ano B',
-      turno: 'VESPERTINO',
-      status: 'INATIVO',
-      responsaveis: [
-        { nome: 'Roberto Rocha', parentesco: 'Pai', telefone: '(11) 94321-0987', email: 'roberto@email.com' }
-      ],
-      endereco: 'Av. Central, 654',
-      cpf: '654.321.987-00',
-      rg: '65.432.198-7'
+  // Carregar alunos
+  useEffect(() => {
+    if (escola?.id) {
+      carregarAlunos();
     }
-  ];
+  }, [escola, filtros]);
 
-  const estatisticas = {
-    total: alunos.length,
-    ativos: alunos.filter(a => a.status === 'ATIVO').length,
-    inativos: alunos.filter(a => a.status === 'INATIVO').length,
-    matriculadosHoje: 2
+  const carregarAlunos = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const data = await alunosApi.listar(escola!.id, {
+        status: filtros.status !== 'TODOS' ? filtros.status : undefined,
+        search: filtros.searchTerm || undefined
+      });
+      setAlunos(data.results || data);
+    } catch (err: any) {
+      setError(err.message || 'Erro ao carregar alunos');
+      console.error('Erro ao carregar alunos:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleVerDetalhes = (aluno) => {
-    setAlunoSelecionado(aluno);
-    setShowDetalhesModal(true);
+  const handleVerDetalhes = async (aluno: Aluno) => {
+    try {
+      const alunoCompleto = await alunosApi.buscar(aluno.id);
+      setAlunoSelecionado(alunoCompleto);
+      setShowDetalhesModal(true);
+    } catch (err: any) {
+      alert('Erro ao carregar detalhes do aluno');
+    }
   };
 
-  const handleEditarAluno = (aluno) => {
-    setAlunoSelecionado(aluno);
-    setShowCadastroModal(true);
+  const handleEditarAluno = async (aluno: Aluno) => {
+    try {
+      const alunoCompleto = await alunosApi.buscar(aluno.id);
+      setAlunoSelecionado(alunoCompleto);
+      setShowCadastroModal(true);
+    } catch (err: any) {
+      alert('Erro ao carregar dados do aluno');
+    }
   };
 
   const handleNovoAluno = () => {
@@ -129,17 +71,39 @@ const Alunos = () => {
     setShowCadastroModal(true);
   };
 
+  const handleSalvarAluno = async () => {
+    await carregarAlunos();
+    setShowCadastroModal(false);
+    setAlunoSelecionado(null);
+  };
+
   const handleImportarAlunos = () => {
-    console.log('Importar planilha de alunos');
     alert('Funcionalidade de importação será implementada');
   };
 
   const handleExportarAlunos = () => {
-    console.log('Exportar lista de alunos');
-    alert('Exportando lista de alunos...');
+    // Exportar para CSV
+    const csv = [
+      ['Nome', 'Matrícula', 'Turma', 'Status', 'Responsável', 'Telefone'].join(','),
+      ...alunos.map(a => [
+        a.nome,
+        a.matricula,
+        a.turma_nome || '-',
+        a.status,
+        a.responsaveis[0]?.nome || '-',
+        a.responsaveis[0]?.telefone || '-'
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `alunos_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
   };
 
-  // Aplicar filtros
+  // Aplicar filtros locais
   const alunosFiltrados = alunos.filter(aluno => {
     const matchSearch = filtros.searchTerm === '' || 
       aluno.nome.toLowerCase().includes(filtros.searchTerm.toLowerCase()) ||
@@ -147,10 +111,29 @@ const Alunos = () => {
       aluno.responsaveis.some(r => r.nome.toLowerCase().includes(filtros.searchTerm.toLowerCase()));
     
     const matchStatus = filtros.status === 'TODOS' || aluno.status === filtros.status;
-    const matchTurma = filtros.turma === 'TODAS' || aluno.turma.includes(filtros.turma);
+    const matchTurma = filtros.turma === 'TODAS' || (aluno.turma_nome && aluno.turma_nome.includes(filtros.turma));
+    const matchTurno = filtros.turno === 'TODOS' || aluno.turno === filtros.turno;
 
-    return matchSearch && matchStatus && matchTurma;
+    return matchSearch && matchStatus && matchTurma && matchTurno;
   });
+
+  const estatisticas = {
+    total: alunos.length,
+    ativos: alunos.filter(a => a.status === 'ATIVO').length,
+    inativos: alunos.filter(a => a.status === 'INATIVO').length,
+    matriculadosHoje: 0 // Implementar contagem por data
+  };
+
+  if (loading && alunos.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Carregando alunos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -190,6 +173,16 @@ const Alunos = () => {
             </button>
           </div>
         </div>
+
+        {/* Erro */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          </div>
+        )}
 
         {/* Cards de Estatísticas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -255,16 +248,19 @@ const Alunos = () => {
         totalAlunos={alunos.length}
         onVerDetalhes={handleVerDetalhes}
         onEditar={handleEditarAluno}
+        loading={loading}
       />
 
       {/* Modais */}
       {showCadastroModal && (
         <CadastroAlunoModal
           aluno={alunoSelecionado}
+          escolaId={escola!.id}
           onClose={() => {
             setShowCadastroModal(false);
             setAlunoSelecionado(null);
           }}
+          onSalvar={handleSalvarAluno}
         />
       )}
 

@@ -3,7 +3,14 @@
 import React, { useState } from 'react';
 import { X, Upload, Plus, Trash2, User } from 'lucide-react';
 
-const CadastroAlunoModal = ({ aluno, onClose }) => {
+interface CadastroAlunoModalProps {
+  aluno: Aluno | null;
+  escolaId: string;
+  onClose: () => void;
+  onSalvar: () => void;
+} 
+
+const CadastroAlunoModal = ({ aluno, escolaId, onClose, onSalvar }: CadastroAlunoModalProps) => {
   const [step, setStep] = useState(1); // 1: Dados do Aluno, 2: Responsáveis, 3: Documentos
   const [formData, setFormData] = useState({
     // Dados do Aluno
@@ -47,6 +54,33 @@ const CadastroAlunoModal = ({ aluno, onClose }) => {
     observacoesMedicas: aluno?.observacoesMedicas || ''
   });
 
+   const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSalvando(true);
+    setErro('');
+
+    try {
+      if (aluno) {
+        // Atualizar
+        await alunosApi.atualizar(aluno.id, formData);
+        alert('Aluno atualizado com sucesso!');
+      } else {
+        // Criar
+        await alunosApi.criar(formData, escolaId);
+        alert('Aluno cadastrado com sucesso!');
+      }
+      onSalvar();
+    } catch (err: any) {
+      setErro(err.message || 'Erro ao salvar aluno');
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+
   const handleChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
   };
@@ -81,12 +115,7 @@ const CadastroAlunoModal = ({ aluno, onClose }) => {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log('Salvando aluno:', formData);
-    alert(aluno ? 'Aluno atualizado com sucesso!' : 'Aluno cadastrado com sucesso!');
-    onClose();
-  };
+
 
   const nextStep = () => {
     if (step < 3) setStep(step + 1);
@@ -549,11 +578,12 @@ const CadastroAlunoModal = ({ aluno, onClose }) => {
                 </button>
               ) : (
                 <button
-                  type="submit"
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  {aluno ? 'Atualizar Aluno' : 'Cadastrar Aluno'}
-                </button>
+                type="submit"
+                disabled={salvando}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+              >
+                {salvando ? 'Salvando...' : (aluno ? 'Atualizar Aluno' : 'Cadastrar Aluno')}
+              </button>
               )}
             </div>
           </div>
