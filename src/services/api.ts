@@ -1,64 +1,72 @@
 const API_BASE_URL = 'http://localhost:8000/api';
 
+// Helper para fazer fetch com autenticação
+const authenticatedFetch = async (endpoint: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem('access_token');
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Token ${token}` }),
+    ...options.headers,
+  };
+
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Erro na requisição');
+  }
+
+  return response.json();
+};
+
 export const api = {
-  // Função auxiliar para fazer requisições autenticadas
-  fetch: async (endpoint: string, options: RequestInit = {}) => {
-    const token = localStorage.getItem('access_token');
-    
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Token ${token}` }),
-      ...options.headers,
-    };
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Erro na requisição: ${response.statusText}`);
-    }
-
-    return response.json();
-  },
-
-  // Auth
-  login: (username: string, password: string) => {
-    return fetch(`${API_BASE_URL}/auth/login/`, {
+  // ========== AUTENTICAÇÃO ==========
+  login: async (username: string, password: string) => {
+    const response = await fetch(`${API_BASE_URL}/auth/login/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
+    return response.json();
   },
 
-  logout: () => {
-    const token = localStorage.getItem('access_token');
-    return fetch(`${API_BASE_URL}/auth/logout/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Token ${token}`,
-      },
-    });
+  logout: async () => {
+    return authenticatedFetch('/auth/logout/', { method: 'POST' });
   },
 
-  // Usuários
+  // ========== USUÁRIOS ==========
   getUsuario: (id: string) => {
-    return api.fetch(`/usuarios/${id}/`);
+    return authenticatedFetch(`/usuarios/${id}/`);
   },
 
-  // Alunos
-  getAlunos: () => {
-    return api.fetch('/alunos/');
+  // ========== ALUNOS ==========
+  getAlunos: (escolaId?: string) => {
+    const params = escolaId ? `?escola=${escolaId}` : '';
+    return authenticatedFetch(`/alunos/${params}`);
   },
 
   getAluno: (id: string) => {
-    return api.fetch(`/alunos/${id}/`);
+    return authenticatedFetch(`/alunos/${id}/`);
   },
 
-  // Dashboard
+  // ========== PROFESSORES ==========
+  getProfessores: (escolaId?: string) => {
+    const params = escolaId ? `?escola=${escolaId}` : '';
+    return authenticatedFetch(`/professores/${params}`);
+  },
+
+  // ========== TURMAS ==========
+  getTurmas: (escolaId?: string) => {
+    const params = escolaId ? `?escola=${escolaId}` : '';
+    return authenticatedFetch(`/turmas/${params}`);
+  },
+
+  // ========== DASHBOARD ==========
   getDashboard: (escolaId: string) => {
-    return api.fetch(`/dashboard/geral/?escola_id=${escolaId}`);
+    return authenticatedFetch(`/dashboard/geral/?escola_id=${escolaId}`);
   },
 };

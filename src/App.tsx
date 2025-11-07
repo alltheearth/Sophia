@@ -11,6 +11,7 @@ import Notas from "./pages/Notas";
 import Auth from "./pages/Auth";
 import Agenda from "./pages/Agenda";
 import Comunicacao from "./pages/Comunicacao";
+import type { JSX } from "react";
 
 // Componente para proteger rotas
 const PrivateRoute = ({ children }: { children: JSX.Element }) => {
@@ -27,7 +28,7 @@ const PrivateRoute = ({ children }: { children: JSX.Element }) => {
     );
   }
 
-  return user ? children : <Navigate to="/auth" />;
+  return user ? children : <Navigate to="/auth" replace />;
 };
 
 function App() {
@@ -35,7 +36,7 @@ function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* Rota de autenticação */}
+          {/* Rota pública */}
           <Route path="/auth" element={<Auth />} />
           
           {/* Rotas protegidas */}

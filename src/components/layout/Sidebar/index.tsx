@@ -1,20 +1,26 @@
-import { BarChart3, Users, GraduationCap, BookOpen, Calendar, DollarSign, MessageSquare, Menu } from "lucide-react";
-import { useState } from "react";
+import { BarChart3, BookOpen, Users, GraduationCap, Calendar, DollarSign, MessageSquare, Menu } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../../hooks/useAuth";
 
-const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
+interface SidebarProps {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+}
+
+const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
   const { user, escola, logout } = useAuth();
-  const [currentPage, setCurrentPage] = useState('dashboard');
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const menuItems = [
-    { icon: BarChart3, label: 'Dashboard', id: 'dashboard', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR'] },
-    { icon: Users, label: 'Alunos', id: 'alunos', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
-    { icon: GraduationCap, label: 'Professores', id: 'professores', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR'] },
-    { icon: BookOpen, label: 'Turmas', id: 'turmas', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
-    { icon: BarChart3, label: 'Notas', id: 'notas', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
-    { icon: Calendar, label: 'Agenda', id: 'agenda', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
-    { icon: DollarSign, label: 'Financeiro', id: 'financeiro', roles: ['SUPERUSER', 'GESTOR'] },
-    { icon: MessageSquare, label: 'Comunicação', id: 'comunicacao', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] }
+    { icon: BarChart3, label: 'Dashboard', path: '/', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR'] },
+    { icon: Users, label: 'Alunos', path: '/alunos', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
+    { icon: GraduationCap, label: 'Professores', path: '/professores', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR'] },
+    { icon: BookOpen, label: 'Turmas', path: '/turmas', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
+    { icon: BarChart3, label: 'Notas', path: '/notas', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
+    { icon: Calendar, label: 'Agenda', path: '/agenda', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] },
+    { icon: DollarSign, label: 'Financeiro', path: '/financeiro', roles: ['SUPERUSER', 'GESTOR'] },
+    { icon: MessageSquare, label: 'Comunicação', path: '/comunicacao', roles: ['SUPERUSER', 'GESTOR', 'COORDENADOR', 'PROFESSOR'] }
   ];
 
   const visibleMenuItems = menuItems.filter(item => item.roles.includes(user?.role || ''));
@@ -66,20 +72,23 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
       )}
 
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {visibleMenuItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setCurrentPage(item.id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-              currentPage === item.id
-                ? 'bg-white/20 text-white shadow-lg' 
-                : 'text-blue-100 hover:bg-white/10'
-            }`}
-          >
-            <item.icon className="w-5 h-5 flex-shrink-0" />
-            {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
-          </button>
-        ))}
+        {visibleMenuItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                isActive
+                  ? 'bg-white/20 text-white shadow-lg' 
+                  : 'text-blue-100 hover:bg-white/10'
+              }`}
+            >
+              <item.icon className="w-5 h-5 flex-shrink-0" />
+              {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
+            </button>
+          );
+        })}
       </nav>
 
       <div className="p-4 border-t border-blue-500/30">
@@ -108,3 +117,5 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
     </aside>
   );
 };
+
+export default Sidebar;
