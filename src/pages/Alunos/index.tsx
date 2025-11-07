@@ -1,13 +1,22 @@
+// src/pages/Alunos/index.tsx
+
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Download, Upload, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { alunosApi, Aluno } from '../../services/alunosApi';
+import { alunosApi, type Aluno } from '../../services/alunosApi';
 import ListaAlunos from './components/ListaAlunos';
 import FiltrosAlunos from './components/FiltrosAlunos';
 import CadastroAlunoModal from './modals/CadastroAluno';
 import DetalhesAlunoModal from './modals/DetalhesAluno';
 
-const Alunos = () => {
+interface Filtros {
+  searchTerm: string;
+  turma: string;
+  status: string;
+  turno: string;
+}
+
+const Alunos: React.FC = () => {
   const { escola } = useAuth();
   const [alunos, setAlunos] = useState<Aluno[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +24,7 @@ const Alunos = () => {
   const [showCadastroModal, setShowCadastroModal] = useState(false);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
   const [alunoSelecionado, setAlunoSelecionado] = useState<Aluno | null>(null);
-  const [filtros, setFiltros] = useState({
+  const [filtros, setFiltros] = useState<Filtros>({
     searchTerm: '',
     turma: 'TODAS',
     status: 'ATIVO',
@@ -27,17 +36,25 @@ const Alunos = () => {
     if (escola?.id) {
       carregarAlunos();
     }
-  }, [escola, filtros]);
+  }, [escola]);
 
   const carregarAlunos = async () => {
+    if (!escola?.id) {
+      setError('Nenhuma escola selecionada');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError('');
-      const data = await alunosApi.listar(escola!.id, {
+      
+      const data = await alunosApi.listar(escola.id, {
         status: filtros.status !== 'TODOS' ? filtros.status : undefined,
         search: filtros.searchTerm || undefined
       });
-      setAlunos(data.results || data);
+      
+      setAlunos(data);
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar alunos');
       console.error('Erro ao carregar alunos:', err);
@@ -52,7 +69,7 @@ const Alunos = () => {
       setAlunoSelecionado(alunoCompleto);
       setShowDetalhesModal(true);
     } catch (err: any) {
-      alert('Erro ao carregar detalhes do aluno');
+      alert('Erro ao carregar detalhes do aluno: ' + err.message);
     }
   };
 
@@ -62,7 +79,7 @@ const Alunos = () => {
       setAlunoSelecionado(alunoCompleto);
       setShowCadastroModal(true);
     } catch (err: any) {
-      alert('Erro ao carregar dados do aluno');
+      alert('Erro ao carregar dados do aluno: ' + err.message);
     }
   };
 
@@ -78,50 +95,63 @@ const Alunos = () => {
   };
 
   const handleImportarAlunos = () => {
-    alert('Funcionalidade de importação será implementada');
+    alert('Funcionalidade de importação será implementada em breve');
   };
 
   const handleExportarAlunos = () => {
+    if (alunos.length === 0) {
+      alert('Não há alunos para exportar');
+      return;
+    }
+
     // Exportar para CSV
     const csv = [
       ['Nome', 'Matrícula', 'Turma', 'Status', 'Responsável', 'Telefone'].join(','),
       ...alunos.map(a => [
         a.nome,
         a.matricula,
-        a.turma_nome || '-',
+        a.turma_nome || a.turma || '-',
         a.status,
         a.responsaveis[0]?.nome || '-',
         a.responsaveis[0]?.telefone || '-'
       ].join(','))
     ].join('\n');
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `alunos_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
   // Aplicar filtros locais
   const alunosFiltrados = alunos.filter(aluno => {
     const matchSearch = filtros.searchTerm === '' || 
       aluno.nome.toLowerCase().includes(filtros.searchTerm.toLowerCase()) ||
-      aluno.matricula.includes(filtros.searchTerm) ||
+      aluno.matricula.toLowerCase().includes(filtros.searchTerm.toLowerCase()) ||
       aluno.responsaveis.some(r => r.nome.toLowerCase().includes(filtros.searchTerm.toLowerCase()));
     
     const matchStatus = filtros.status === 'TODOS' || aluno.status === filtros.status;
-    const matchTurma = filtros.turma === 'TODAS' || (aluno.turma_nome && aluno.turma_nome.includes(filtros.turma));
+    
+    const matchTurma = filtros.turma === 'TODAS' || 
+      (aluno.turma_nome && aluno.turma_nome.includes(filtros.turma)) ||
+      (aluno.turma && aluno.turma.includes(filtros.turma));
+    
     const matchTurno = filtros.turno === 'TODOS' || aluno.turno === filtros.turno;
 
     return matchSearch && matchStatus && matchTurma && matchTurno;
   });
 
+  // Estatísticas
   const estatisticas = {
     total: alunos.length,
     ativos: alunos.filter(a => a.status === 'ATIVO').length,
     inativos: alunos.filter(a => a.status === 'INATIVO').length,
-    matriculadosHoje: 0 // Implementar contagem por data
+    matriculadosHoje: 0 // TODO: Implementar contagem por data
   };
 
   if (loading && alunos.length === 0) {
@@ -159,7 +189,8 @@ const Alunos = () => {
             </button>
             <button 
               onClick={handleExportarAlunos}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              disabled={alunos.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Download className="w-4 h-4" />
               Exportar

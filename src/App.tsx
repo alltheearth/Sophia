@@ -4,7 +4,7 @@ import { useAuth } from "./hooks/useAuth";
 import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./components/Dashboard";
 import Financeiro from "./pages/Financeiro";
-import Alunos from "./pages/Alunos";
+import Alunos from "./pages/Alunos"
 import Professores from "./pages/Professores";
 import Turmas from "./pages/Turmas";
 import Notas from "./pages/Notas";

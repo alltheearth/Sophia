@@ -1,21 +1,27 @@
-// src/pages/Alunos/modals/CadastroAluno.jsx
+// src/pages/Alunos/modals/CadastroAluno.tsx
 
 import React, { useState } from 'react';
 import { X, Upload, Plus, Trash2, User } from 'lucide-react';
+import {  type Aluno, alunosApi } from '../../../services/alunosApi';
 
 interface CadastroAlunoModalProps {
   aluno: Aluno | null;
   escolaId: string;
   onClose: () => void;
   onSalvar: () => void;
-} 
+}
 
-const CadastroAlunoModal = ({ aluno, escolaId, onClose, onSalvar }: CadastroAlunoModalProps) => {
-  const [step, setStep] = useState(1); // 1: Dados do Aluno, 2: Responsáveis, 3: Documentos
+const CadastroAlunoModal: React.FC<CadastroAlunoModalProps> = ({ 
+  aluno, 
+  escolaId, 
+  onClose, 
+  onSalvar 
+}) => {
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     // Dados do Aluno
     nome: aluno?.nome || '',
-    dataNascimento: aluno?.dataNascimento || '',
+    dataNascimento: aluno?.data_nascimento || aluno?.dataNascimento || '',
     cpf: aluno?.cpf || '',
     rg: aluno?.rg || '',
     sexo: aluno?.sexo || '',
@@ -31,30 +37,35 @@ const CadastroAlunoModal = ({ aluno, escolaId, onClose, onSalvar }: CadastroAlun
     
     // Dados Escolares
     matricula: aluno?.matricula || '',
-    turma: aluno?.turma || '',
+    turma: aluno?.turma_atual || aluno?.turma || '',
     turno: aluno?.turno || 'MATUTINO',
-    dataMatricula: aluno?.dataMatricula || new Date().toISOString().split('T')[0],
+    dataMatricula: aluno?.data_matricula || aluno?.dataMatricula || new Date().toISOString().split('T')[0],
     
     // Responsáveis
-    responsaveis: aluno?.responsaveis || [
-      {
-        nome: '',
-        cpf: '',
-        parentesco: 'MÃE',
-        telefone: '',
-        email: '',
-        responsavelFinanceiro: true
-      }
-    ],
+    responsaveis: aluno?.responsaveis && aluno.responsaveis.length > 0 ? aluno.responsaveis.map(r => ({
+      nome: r.nome,
+      cpf: r.cpf || '',
+      parentesco: r.parentesco,
+      telefone: r.telefone,
+      email: r.email,
+      responsavelFinanceiro: r.responsavel_financeiro
+    })) : [{
+      nome: '',
+      cpf: '',
+      parentesco: 'MÃE',
+      telefone: '',
+      email: '',
+      responsavelFinanceiro: true
+    }],
     
     // Saúde
-    tipoSanguineo: aluno?.tipoSanguineo || '',
+    tipoSanguineo: aluno?.tipo_sanguineo || aluno?.tipoSanguineo || '',
     alergias: aluno?.alergias || '',
     medicamentos: aluno?.medicamentos || '',
-    observacoesMedicas: aluno?.observacoesMedicas || ''
+    observacoesMedicas: aluno?.observacoes_medicas || aluno?.observacoesMedicas || ''
   });
 
-   const [salvando, setSalvando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,19 +86,19 @@ const CadastroAlunoModal = ({ aluno, escolaId, onClose, onSalvar }: CadastroAlun
       onSalvar();
     } catch (err: any) {
       setErro(err.message || 'Erro ao salvar aluno');
+      console.error('Erro ao salvar:', err);
     } finally {
       setSalvando(false);
     }
   };
 
-
-  const handleChange = (field, value) => {
+  const handleChange = (field: string, value: any) => {
     setFormData({ ...formData, [field]: value });
   };
 
-  const handleResponsavelChange = (index, field, value) => {
+  const handleResponsavelChange = (index: number, field: string, value: any) => {
     const novosResponsaveis = [...formData.responsaveis];
-    novosResponsaveis[index][field] = value;
+    novosResponsaveis[index] = { ...novosResponsaveis[index], [field]: value };
     setFormData({ ...formData, responsaveis: novosResponsaveis });
   };
 
@@ -108,14 +119,12 @@ const CadastroAlunoModal = ({ aluno, escolaId, onClose, onSalvar }: CadastroAlun
     });
   };
 
-  const removerResponsavel = (index) => {
+  const removerResponsavel = (index: number) => {
     if (formData.responsaveis.length > 1) {
       const novosResponsaveis = formData.responsaveis.filter((_, i) => i !== index);
       setFormData({ ...formData, responsaveis: novosResponsaveis });
     }
   };
-
-
 
   const nextStep = () => {
     if (step < 3) setStep(step + 1);
@@ -163,6 +172,13 @@ const CadastroAlunoModal = ({ aluno, escolaId, onClose, onSalvar }: CadastroAlun
         </div>
 
         <form onSubmit={handleSubmit}>
+          {/* Erro */}
+          {erro && (
+            <div className="mx-6 mt-4 p-4 bg-red-50 border-l-4 border-red-500 rounded">
+              <p className="text-sm text-red-800">{erro}</p>
+            </div>
+          )}
+
           {/* Step 1: Dados do Aluno */}
           {step === 1 && (
             <div className="p-6 space-y-6">
@@ -171,7 +187,10 @@ const CadastroAlunoModal = ({ aluno, escolaId, onClose, onSalvar }: CadastroAlun
                 <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-2xl">
                   <User className="w-12 h-12" />
                 </div>
-                <button type="button" className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100">
+                <button 
+                  type="button" 
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
+                >
                   <Upload className="w-4 h-4" />
                   Enviar Foto
                 </button>
@@ -318,7 +337,7 @@ const CadastroAlunoModal = ({ aluno, escolaId, onClose, onSalvar }: CadastroAlun
                       required={!aluno}
                       value={formData.matricula}
                       onChange={(e) => handleChange('matricula', e.target.value)}
-                      placeholder="Gerada automaticamente"
+                      placeholder="Ex: 2024001"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
@@ -335,20 +354,14 @@ const CadastroAlunoModal = ({ aluno, escolaId, onClose, onSalvar }: CadastroAlun
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Turma *</label>
-                    <select
-                      required
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Turma</label>
+                    <input
+                      type="text"
                       value={formData.turma}
                       onChange={(e) => handleChange('turma', e.target.value)}
+                      placeholder="Ex: 1º Ano A"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Selecione...</option>
-                      <option value="1º Ano A">1º Ano A</option>
-                      <option value="1º Ano B">1º Ano B</option>
-                      <option value="2º Ano A">2º Ano A</option>
-                      <option value="3º Ano B">3º Ano B</option>
-                      <option value="5º Ano C">5º Ano C</option>
-                    </select>
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Turno *</label>
@@ -578,12 +591,12 @@ const CadastroAlunoModal = ({ aluno, escolaId, onClose, onSalvar }: CadastroAlun
                 </button>
               ) : (
                 <button
-                type="submit"
-                disabled={salvando}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-              >
-                {salvando ? 'Salvando...' : (aluno ? 'Atualizar Aluno' : 'Cadastrar Aluno')}
-              </button>
+                  type="submit"
+                  disabled={salvando}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  {salvando ? 'Salvando...' : (aluno ? 'Atualizar Aluno' : 'Cadastrar Aluno')}
+                </button>
               )}
             </div>
           </div>
