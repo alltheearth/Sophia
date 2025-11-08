@@ -1,19 +1,28 @@
-// src/pages/Turmas/index.jsx
+// src/pages/Turmas/index.tsx
 
-import React, { useState } from 'react';
-import { Users, Plus, Download, Grid, List } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Plus, Download, Grid, List, Loader2 } from 'lucide-react';
 import ListaTurmas from './components/ListaTurmas';
 import FiltrosTurmas from './components/FiltrosTurmas';
 import CadastroTurmaModal from './modals/CadastroTurma';
 import DetalhesTurmaModal from './modals/DetalhesTurma';
 import AlocarAlunosModal from './modals/AlocarAlunos';
+import { turmasApi, type Turma } from '../../services/turmasApi';
+import { useAuth } from '../../hooks/useAuth';
 
 const Turmas = () => {
+  const { escola } = useAuth();
+  const [turmas, setTurmas] = useState<Turma[]>([]);
+  const [turmasFiltradas, setTurmasFiltradas] = useState<Turma[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [showCadastroModal, setShowCadastroModal] = useState(false);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
   const [showAlocarModal, setShowAlocarModal] = useState(false);
-  const [turmaSelecionada, setTurmaSelecionada] = useState(null);
+  const [turmaSelecionada, setTurmaSelecionada] = useState<Turma | null>(null);
   const [visualizacao, setVisualizacao] = useState('grid');
+  
   const [filtros, setFiltros] = useState({
     searchTerm: '',
     serie: 'TODAS',
@@ -21,150 +30,79 @@ const Turmas = () => {
     anoLetivo: '2025'
   });
 
-  // Dados mockados - virão da API
-  const turmas = [
-    {
-      id: 1,
-      nome: '5º Ano A',
-      serie: '5º Ano',
-      turno: 'MATUTINO',
-      anoLetivo: 2025,
-      capacidadeMaxima: 30,
-      totalAlunos: 28,
-      coordenador: { nome: 'Maria Silva', foto: null },
-      professorTitular: { nome: 'João Santos', foto: null },
-      sala: '101',
-      disciplinas: [
-        { nome: 'Matemática', professor: 'João Santos' },
-        { nome: 'Português', professor: 'Ana Costa' },
-        { nome: 'Ciências', professor: 'Carlos Lima' },
-        { nome: 'História', professor: 'Paula Rocha' }
-      ],
-      mediaGeral: 8.2,
-      frequenciaMedia: 96.5,
-      status: 'ATIVO'
-    },
-    {
-      id: 2,
-      nome: '5º Ano B',
-      serie: '5º Ano',
-      turno: 'VESPERTINO',
-      anoLetivo: 2025,
-      capacidadeMaxima: 30,
-      totalAlunos: 30,
-      coordenador: { nome: 'Maria Silva', foto: null },
-      professorTitular: { nome: 'João Santos', foto: null },
-      sala: '102',
-      disciplinas: [
-        { nome: 'Matemática', professor: 'João Santos' },
-        { nome: 'Português', professor: 'Ana Costa' },
-        { nome: 'Ciências', professor: 'Carlos Lima' },
-        { nome: 'Geografia', professor: 'Roberto Alves' }
-      ],
-      mediaGeral: 7.8,
-      frequenciaMedia: 95.2,
-      status: 'ATIVO'
-    },
-    {
-      id: 3,
-      nome: '4º Ano C',
-      serie: '4º Ano',
-      turno: 'MATUTINO',
-      anoLetivo: 2025,
-      capacidadeMaxima: 28,
-      totalAlunos: 25,
-      coordenador: { nome: 'Maria Silva', foto: null },
-      professorTitular: { nome: 'Ana Costa', foto: null },
-      sala: '201',
-      disciplinas: [
-        { nome: 'Matemática', professor: 'João Santos' },
-        { nome: 'Português', professor: 'Ana Costa' },
-        { nome: 'Ciências', professor: 'Carlos Lima' }
-      ],
-      mediaGeral: 8.5,
-      frequenciaMedia: 97.8,
-      status: 'ATIVO'
-    },
-    {
-      id: 4,
-      nome: '3º Ano A',
-      serie: '3º Ano',
-      turno: 'MATUTINO',
-      anoLetivo: 2025,
-      capacidadeMaxima: 25,
-      totalAlunos: 24,
-      coordenador: { nome: 'Pedro Oliveira', foto: null },
-      professorTitular: { nome: 'Maria Costa', foto: null },
-      sala: '301',
-      disciplinas: [
-        { nome: 'Matemática', professor: 'João Santos' },
-        { nome: 'Português', professor: 'Maria Costa' },
-        { nome: 'Ciências', professor: 'Carlos Lima' }
-      ],
-      mediaGeral: 8.0,
-      frequenciaMedia: 96.0,
-      status: 'ATIVO'
-    },
-    {
-      id: 5,
-      nome: '2º Ano A',
-      serie: '2º Ano',
-      turno: 'VESPERTINO',
-      anoLetivo: 2025,
-      capacidadeMaxima: 25,
-      totalAlunos: 22,
-      coordenador: { nome: 'Pedro Oliveira', foto: null },
-      professorTitular: { nome: 'Paula Rocha', foto: null },
-      sala: '302',
-      disciplinas: [
-        { nome: 'Matemática', professor: 'João Santos' },
-        { nome: 'Português', professor: 'Paula Rocha' },
-        { nome: 'Artes', professor: 'Lucia Santos' }
-      ],
-      mediaGeral: 8.3,
-      frequenciaMedia: 98.0,
-      status: 'ATIVO'
-    },
-    {
-      id: 6,
-      nome: '1º Ano B',
-      serie: '1º Ano',
-      turno: 'MATUTINO',
-      anoLetivo: 2025,
-      capacidadeMaxima: 20,
-      totalAlunos: 18,
-      coordenador: { nome: 'Pedro Oliveira', foto: null },
-      professorTitular: { nome: 'Juliana Lima', foto: null },
-      sala: '401',
-      disciplinas: [
-        { nome: 'Alfabetização', professor: 'Juliana Lima' },
-        { nome: 'Matemática', professor: 'Juliana Lima' },
-        { nome: 'Artes', professor: 'Lucia Santos' }
-      ],
-      mediaGeral: 8.7,
-      frequenciaMedia: 97.5,
-      status: 'ATIVO'
-    }
-  ];
+  // Carregar turmas ao montar o componente
+  useEffect(() => {
+    carregarTurmas();
+  }, [escola]);
 
-  const estatisticas = {
-    total: turmas.length,
-    totalAlunos: turmas.reduce((acc, t) => acc + t.totalAlunos, 0),
-    mediaAlunos: Math.round(turmas.reduce((acc, t) => acc + t.totalAlunos, 0) / turmas.length),
-    mediaGeral: (turmas.reduce((acc, t) => acc + t.mediaGeral, 0) / turmas.length).toFixed(1)
+  // Aplicar filtros quando mudarem
+  useEffect(() => {
+    aplicarFiltros();
+  }, [turmas, filtros]);
+
+  const carregarTurmas = async () => {
+    if (!escola?.id) {
+      setError('Nenhuma escola selecionada');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await turmasApi.listar(escola.id, filtros);
+      setTurmas(data);
+    } catch (err: any) {
+      console.error('Erro ao carregar turmas:', err);
+      setError(err.message || 'Erro ao carregar turmas');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleVerDetalhes = (turma) => {
+  const aplicarFiltros = () => {
+    let resultado = [...turmas];
+
+    // Filtro de busca
+    if (filtros.searchTerm) {
+      const termo = filtros.searchTerm.toLowerCase();
+      resultado = resultado.filter(turma => 
+        turma.nome.toLowerCase().includes(termo) ||
+        turma.professorTitular?.nome?.toLowerCase().includes(termo)
+      );
+    }
+
+    // Filtro de série
+    if (filtros.serie !== 'TODAS') {
+      resultado = resultado.filter(turma => turma.serie.includes(filtros.serie));
+    }
+
+    // Filtro de turno
+    if (filtros.turno !== 'TODOS') {
+      resultado = resultado.filter(turma => turma.turno === filtros.turno);
+    }
+
+    // Filtro de ano letivo
+    if (filtros.anoLetivo) {
+      resultado = resultado.filter(turma => 
+        turma.anoLetivo?.toString() === filtros.anoLetivo
+      );
+    }
+
+    setTurmasFiltradas(resultado);
+  };
+
+  const handleVerDetalhes = (turma: Turma) => {
     setTurmaSelecionada(turma);
     setShowDetalhesModal(true);
   };
 
-  const handleEditarTurma = (turma) => {
+  const handleEditarTurma = (turma: Turma) => {
     setTurmaSelecionada(turma);
     setShowCadastroModal(true);
   };
 
-  const handleAlocarAlunos = (turma) => {
+  const handleAlocarAlunos = (turma: Turma) => {
     setTurmaSelecionada(turma);
     setShowAlocarModal(true);
   };
@@ -174,23 +112,97 @@ const Turmas = () => {
     setShowCadastroModal(true);
   };
 
-  const handleExportarTurmas = () => {
-    console.log('Exportar lista de turmas');
-    alert('Exportando lista de turmas...');
+  const handleSalvarTurma = async (formData: any) => {
+    if (!escola?.id) return;
+
+    try {
+      if (turmaSelecionada) {
+        // Atualizar
+        await turmasApi.atualizar(turmaSelecionada.id, formData);
+      } else {
+        // Criar
+        await turmasApi.criar(formData, escola.id);
+      }
+      
+      // Recarregar lista
+      await carregarTurmas();
+      setShowCadastroModal(false);
+      setTurmaSelecionada(null);
+    } catch (err: any) {
+      console.error('Erro ao salvar turma:', err);
+      alert(err.message || 'Erro ao salvar turma');
+      throw err;
+    }
   };
 
-  // Aplicar filtros
-  const turmasFiltradas = turmas.filter(turma => {
-    const matchSearch = filtros.searchTerm === '' || 
-      turma.nome.toLowerCase().includes(filtros.searchTerm.toLowerCase()) ||
-      turma.professorTitular.nome.toLowerCase().includes(filtros.searchTerm.toLowerCase());
-    
-    const matchSerie = filtros.serie === 'TODAS' || turma.serie.includes(filtros.serie);
-    const matchTurno = filtros.turno === 'TODOS' || turma.turno === filtros.turno;
-    const matchAno = turma.anoLetivo.toString() === filtros.anoLetivo;
+  const handleDeletarTurma = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta turma? Esta ação não pode ser desfeita.')) {
+      return;
+    }
 
-    return matchSearch && matchSerie && matchTurno && matchAno;
-  });
+    try {
+      await turmasApi.deletar(id);
+      await carregarTurmas();
+      alert('Turma excluída com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao deletar turma:', err);
+      alert(err.message || 'Erro ao deletar turma');
+    }
+  };
+
+  const handleExportarTurmas = async () => {
+    if (!escola?.id) return;
+    
+    try {
+      await turmasApi.exportar(escola.id, 'xlsx');
+    } catch (err: any) {
+      console.error('Erro ao exportar:', err);
+      alert(err.message || 'Erro ao exportar turmas');
+    }
+  };
+
+  // Calcular estatísticas
+  const estatisticas = {
+    total: turmas.length,
+    totalAlunos: turmas.reduce((acc, t) => acc + (t.totalAlunos || 0), 0),
+    mediaAlunos: turmas.length > 0 
+      ? Math.round(turmas.reduce((acc, t) => acc + (t.totalAlunos || 0), 0) / turmas.length)
+      : 0,
+    mediaGeral: turmas.length > 0
+      ? (turmas.reduce((acc, t) => acc + (t.mediaGeral || 0), 0) / turmas.length).toFixed(1)
+      : '0.0'
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-teal-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Carregando turmas...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">⚠️</span>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Erro ao carregar turmas</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={carregarTurmas}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -312,6 +324,7 @@ const Turmas = () => {
         onVerDetalhes={handleVerDetalhes}
         onEditar={handleEditarTurma}
         onAlocarAlunos={handleAlocarAlunos}
+        onDeletar={handleDeletarTurma}
       />
 
       {/* Modais */}
@@ -322,6 +335,7 @@ const Turmas = () => {
             setShowCadastroModal(false);
             setTurmaSelecionada(null);
           }}
+          onSave={handleSalvarTurma}
         />
       )}
 
@@ -349,6 +363,17 @@ const Turmas = () => {
           onClose={() => {
             setShowAlocarModal(false);
             setTurmaSelecionada(null);
+          }}
+          onSave={async (alunosIds: string[]) => {
+            try {
+              await turmasApi.alocarAlunos(turmaSelecionada.id, alunosIds);
+              await carregarTurmas();
+              setShowAlocarModal(false);
+              setTurmaSelecionada(null);
+            } catch (err: any) {
+              console.error('Erro ao alocar alunos:', err);
+              alert(err.message || 'Erro ao alocar alunos');
+            }
           }}
         />
       )}

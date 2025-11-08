@@ -1,18 +1,27 @@
-// src/pages/Professores/index.jsx
+// src/pages/Professores/index.tsx
 
-import React, { useState } from 'react';
-import { GraduationCap, Plus, Download, Upload, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { GraduationCap, Plus, Download, Upload, Calendar, Loader2 } from 'lucide-react';
 import ListaProfessores from './components/ListaProfessores';
 import FiltrosProfessores from './components/FiltrosProfessores';
 import CadastroProfessorModal from './modals/CadastroProfessor';
 import DetalhesProfessorModal from './modals/DetalhesProfessor';
 import HorariosProfessorModal from './modals/HorariosProfessor';
+import { professoresApi, type Professor } from '../../services/professoresApi';
+import { useAuth } from '../../hooks/useAuth';
 
 const Professores = () => {
+  const { escola } = useAuth();
+  const [professores, setProfessores] = useState<Professor[]>([]);
+  const [professoresFiltrados, setProfessoresFiltrados] = useState<Professor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [showCadastroModal, setShowCadastroModal] = useState(false);
   const [showDetalhesModal, setShowDetalhesModal] = useState(false);
   const [showHorariosModal, setShowHorariosModal] = useState(false);
-  const [professorSelecionado, setProfessorSelecionado] = useState(null);
+  const [professorSelecionado, setProfessorSelecionado] = useState<Professor | null>(null);
+  
   const [filtros, setFiltros] = useState({
     searchTerm: '',
     disciplina: 'TODAS',
@@ -20,128 +29,80 @@ const Professores = () => {
     turno: 'TODOS'
   });
 
-  // Dados mockados - virão da API
-  const professores = [
-    {
-      id: 1,
-      nome: 'João Silva Santos',
-      email: 'joao.silva@escola.com',
-      telefone: '(11) 98765-4321',
-      cpf: '123.456.789-00',
-      rg: '12.345.678-9',
-      foto: null,
-      dataNascimento: '1985-03-15',
-      dataAdmissao: '2020-02-01',
-      status: 'ATIVO',
-      formacao: 'Licenciatura em Matemática',
-      especializacao: 'Mestrado em Educação Matemática',
-      disciplinas: ['Matemática', 'Física'],
-      turmas: ['5º Ano A', '5º Ano B', '4º Ano C'],
-      cargaHoraria: 40,
-      turno: 'MATUTINO',
-      salario: 4500.00,
-      endereco: 'Rua das Flores, 123 - Centro'
-    },
-    {
-      id: 2,
-      nome: 'Maria Oliveira Costa',
-      email: 'maria.costa@escola.com',
-      telefone: '(11) 97654-3210',
-      cpf: '987.654.321-00',
-      rg: '98.765.432-1',
-      foto: null,
-      dataNascimento: '1990-07-22',
-      dataAdmissao: '2019-08-15',
-      status: 'ATIVO',
-      formacao: 'Licenciatura em Letras',
-      especializacao: 'Especialização em Língua Portuguesa',
-      disciplinas: ['Português', 'Literatura'],
-      turmas: ['3º Ano A', '3º Ano B', '4º Ano A'],
-      cargaHoraria: 30,
-      turno: 'VESPERTINO',
-      salario: 3800.00,
-      endereco: 'Av. Principal, 456 - Jardim'
-    },
-    {
-      id: 3,
-      nome: 'Carlos Eduardo Ferreira',
-      email: 'carlos.ferreira@escola.com',
-      telefone: '(11) 96543-2109',
-      cpf: '456.789.123-00',
-      rg: '45.678.912-3',
-      foto: null,
-      dataNascimento: '1988-11-10',
-      dataAdmissao: '2021-03-20',
-      status: 'ATIVO',
-      formacao: 'Licenciatura em História',
-      especializacao: 'Mestrado em História do Brasil',
-      disciplinas: ['História', 'Geografia'],
-      turmas: ['2º Ano A', '1º Ano B'],
-      cargaHoraria: 20,
-      turno: 'MATUTINO',
-      salario: 2800.00,
-      endereco: 'Rua da Paz, 789 - Vila Nova'
-    },
-    {
-      id: 4,
-      nome: 'Ana Paula Rodrigues',
-      email: 'ana.rodrigues@escola.com',
-      telefone: '(11) 95432-1098',
-      cpf: '321.654.987-00',
-      rg: '32.165.498-7',
-      foto: null,
-      dataNascimento: '1992-05-18',
-      dataAdmissao: '2022-01-10',
-      status: 'ATIVO',
-      formacao: 'Licenciatura em Ciências Biológicas',
-      especializacao: 'Especialização em Meio Ambiente',
-      disciplinas: ['Ciências'],
-      turmas: ['5º Ano A', '5º Ano B', '5º Ano C'],
-      cargaHoraria: 40,
-      turno: 'INTEGRAL',
-      salario: 4200.00,
-      endereco: 'Rua do Sol, 321 - Bela Vista'
-    },
-    {
-      id: 5,
-      nome: 'Roberto Almeida Lima',
-      email: 'roberto.lima@escola.com',
-      telefone: '(11) 94321-0987',
-      cpf: '654.321.987-00',
-      rg: '65.432.198-7',
-      foto: null,
-      dataNascimento: '1983-09-25',
-      dataAdmissao: '2018-05-05',
-      status: 'FERIAS',
-      formacao: 'Licenciatura em Educação Física',
-      especializacao: 'Especialização em Educação Física Escolar',
-      disciplinas: ['Educação Física'],
-      turmas: ['1º Ano A', '2º Ano A', '3º Ano A', '4º Ano A', '5º Ano A'],
-      cargaHoraria: 40,
-      turno: 'INTEGRAL',
-      salario: 3500.00,
-      endereco: 'Av. Central, 654 - Centro'
-    }
-  ];
+  // Carregar professores ao montar o componente
+  useEffect(() => {
+    carregarProfessores();
+  }, [escola]);
 
-  const estatisticas = {
-    total: professores.length,
-    ativos: professores.filter(p => p.status === 'ATIVO').length,
-    ferias: professores.filter(p => p.status === 'FERIAS').length,
-    mediaAlunos: 85
+  // Aplicar filtros quando mudarem
+  useEffect(() => {
+    aplicarFiltros();
+  }, [professores, filtros]);
+
+  const carregarProfessores = async () => {
+    if (!escola?.id) {
+      setError('Nenhuma escola selecionada');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await professoresApi.listar(escola.id, filtros);
+      setProfessores(data);
+    } catch (err: any) {
+      console.error('Erro ao carregar professores:', err);
+      setError(err.message || 'Erro ao carregar professores');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleVerDetalhes = (professor) => {
+  const aplicarFiltros = () => {
+    let resultado = [...professores];
+
+    // Filtro de busca
+    if (filtros.searchTerm) {
+      const termo = filtros.searchTerm.toLowerCase();
+      resultado = resultado.filter(prof => 
+        prof.nome.toLowerCase().includes(termo) ||
+        prof.email.toLowerCase().includes(termo) ||
+        prof.disciplinas.some(d => d.toLowerCase().includes(termo))
+      );
+    }
+
+    // Filtro de status
+    if (filtros.status !== 'TODOS') {
+      resultado = resultado.filter(prof => prof.status === filtros.status);
+    }
+
+    // Filtro de disciplina
+    if (filtros.disciplina !== 'TODAS') {
+      resultado = resultado.filter(prof => 
+        prof.disciplinas.includes(filtros.disciplina)
+      );
+    }
+
+    // Filtro de turno
+    if (filtros.turno !== 'TODOS') {
+      resultado = resultado.filter(prof => prof.turno === filtros.turno);
+    }
+
+    setProfessoresFiltrados(resultado);
+  };
+
+  const handleVerDetalhes = (professor: Professor) => {
     setProfessorSelecionado(professor);
     setShowDetalhesModal(true);
   };
 
-  const handleEditarProfessor = (professor) => {
+  const handleEditarProfessor = (professor: Professor) => {
     setProfessorSelecionado(professor);
     setShowCadastroModal(true);
   };
 
-  const handleVerHorarios = (professor) => {
+  const handleVerHorarios = (professor: Professor) => {
     setProfessorSelecionado(professor);
     setShowHorariosModal(true);
   };
@@ -151,30 +112,115 @@ const Professores = () => {
     setShowCadastroModal(true);
   };
 
-  const handleImportarProfessores = () => {
-    console.log('Importar planilha de professores');
-    alert('Funcionalidade de importação será implementada');
+  const handleSalvarProfessor = async (formData: any) => {
+    if (!escola?.id) return;
+
+    try {
+      if (professorSelecionado) {
+        // Atualizar
+        await professoresApi.atualizar(professorSelecionado.id, formData);
+      } else {
+        // Criar
+        await professoresApi.criar(formData, escola.id);
+      }
+      
+      // Recarregar lista
+      await carregarProfessores();
+      setShowCadastroModal(false);
+      setProfessorSelecionado(null);
+    } catch (err: any) {
+      console.error('Erro ao salvar professor:', err);
+      alert(err.message || 'Erro ao salvar professor');
+      throw err; // Lança erro para o modal tratar
+    }
   };
 
-  const handleExportarProfessores = () => {
-    console.log('Exportar lista de professores');
-    alert('Exportando lista de professores...');
+  const handleDeletarProfessor = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este professor?')) {
+      return;
+    }
+
+    try {
+      await professoresApi.deletar(id);
+      await carregarProfessores();
+      alert('Professor excluído com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao deletar professor:', err);
+      alert(err.message || 'Erro ao deletar professor');
+    }
   };
 
-  // Aplicar filtros
-  const professoresFiltrados = professores.filter(professor => {
-    const matchSearch = filtros.searchTerm === '' || 
-      professor.nome.toLowerCase().includes(filtros.searchTerm.toLowerCase()) ||
-      professor.email.toLowerCase().includes(filtros.searchTerm.toLowerCase()) ||
-      professor.disciplinas.some(d => d.toLowerCase().includes(filtros.searchTerm.toLowerCase()));
+  const handleImportarProfessores = async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.xlsx,.xls,.csv';
+    input.onchange = async (e: any) => {
+      const file = e.target.files[0];
+      if (file && escola?.id) {
+        try {
+          await professoresApi.importarLote(file, escola.id);
+          await carregarProfessores();
+          alert('Professores importados com sucesso!');
+        } catch (err: any) {
+          console.error('Erro ao importar:', err);
+          alert(err.message || 'Erro ao importar professores');
+        }
+      }
+    };
+    input.click();
+  };
+
+  const handleExportarProfessores = async () => {
+    if (!escola?.id) return;
     
-    const matchStatus = filtros.status === 'TODOS' || professor.status === filtros.status;
-    const matchDisciplina = filtros.disciplina === 'TODAS' || 
-      professor.disciplinas.includes(filtros.disciplina);
-    const matchTurno = filtros.turno === 'TODOS' || professor.turno === filtros.turno;
+    try {
+      await professoresApi.exportar(escola.id, 'xlsx');
+    } catch (err: any) {
+      console.error('Erro ao exportar:', err);
+      alert(err.message || 'Erro ao exportar professores');
+    }
+  };
 
-    return matchSearch && matchStatus && matchDisciplina && matchTurno;
-  });
+  // Calcular estatísticas
+  const estatisticas = {
+    total: professores.length,
+    ativos: professores.filter(p => p.status === 'ATIVO').length,
+    ferias: professores.filter(p => p.status === 'FERIAS').length,
+    mediaAlunos: professores.length > 0 
+      ? Math.round(professores.reduce((acc, p) => acc + p.turmas.length, 0) / professores.length * 30)
+      : 0
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-purple-600 animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Carregando professores...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-2xl">⚠️</span>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Erro ao carregar professores</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={carregarProfessores}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -280,6 +326,7 @@ const Professores = () => {
         onVerDetalhes={handleVerDetalhes}
         onEditar={handleEditarProfessor}
         onVerHorarios={handleVerHorarios}
+        onDeletar={handleDeletarProfessor}
       />
 
       {/* Modais */}
@@ -290,6 +337,7 @@ const Professores = () => {
             setShowCadastroModal(false);
             setProfessorSelecionado(null);
           }}
+          onSave={handleSalvarProfessor}
         />
       )}
 

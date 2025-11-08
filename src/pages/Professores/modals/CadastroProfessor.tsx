@@ -1,10 +1,24 @@
-// src/pages/Professores/modals/CadastroProfessor.jsx
+// src/pages/Professores/modals/CadastroProfessor.tsx
 
 import React, { useState } from 'react';
-import { X, Upload, Plus, Trash2, GraduationCap } from 'lucide-react';
+import { X, Upload, Plus, GraduationCap, Loader2 } from 'lucide-react';
+import {type Professor } from '../../../services/professoresApi';
 
-const CadastroProfessorModal = ({ professor, onClose }) => {
-  const [step, setStep] = useState(1); // 1: Dados Pessoais, 2: Dados Profissionais, 3: Disciplinas e Turmas
+interface CadastroProfessorModalProps {
+  professor: Professor | null;
+  onClose: () => void;
+  onSave: (data: any) => Promise<void>;
+}
+
+const CadastroProfessorModal: React.FC<CadastroProfessorModalProps> = ({ 
+  professor, 
+  onClose,
+  onSave 
+}) => {
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState({
     // Dados Pessoais
     nome: professor?.nome || '',
@@ -12,7 +26,7 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
     telefone: professor?.telefone || '',
     cpf: professor?.cpf || '',
     rg: professor?.rg || '',
-    dataNascimento: professor?.dataNascimento || '',
+    dataNascimento: professor?.dataNascimento || professor?.data_nascimento || '',
     sexo: professor?.sexo || '',
     
     // Endereço
@@ -24,11 +38,11 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
     cidade: professor?.cidade || '',
     
     // Dados Profissionais
-    dataAdmissao: professor?.dataAdmissao || new Date().toISOString().split('T')[0],
-    registro: professor?.registro || '',
+    dataAdmissao: professor?.dataAdmissao || professor?.data_admissao || new Date().toISOString().split('T')[0],
+    registro: professor?.registro || professor?.registro_profissional || '',
     formacao: professor?.formacao || '',
     especializacao: professor?.especializacao || '',
-    cargaHoraria: professor?.cargaHoraria || 40,
+    cargaHoraria: professor?.cargaHoraria || professor?.carga_horaria || 40,
     turno: professor?.turno || 'MATUTINO',
     status: professor?.status || 'ATIVO',
     salario: professor?.salario || '',
@@ -40,8 +54,9 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
 
   const [novaDisciplina, setNovaDisciplina] = useState('');
 
-  const handleChange = (field, value) => {
+  const handleChange = (field: string, value: any) => {
     setFormData({ ...formData, [field]: value });
+    setError(null);
   };
 
   const adicionarDisciplina = () => {
@@ -54,26 +69,94 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
     }
   };
 
-  const removerDisciplina = (disciplina) => {
+  const removerDisciplina = (disciplina: string) => {
     setFormData({
       ...formData,
       disciplinas: formData.disciplinas.filter(d => d !== disciplina)
     });
   };
 
-  const handleSubmit = (e) => {
+  const validarStep = (currentStep: number): boolean => {
+    if (currentStep === 1) {
+      if (!formData.nome || !formData.email || !formData.telefone || !formData.cpf) {
+        setError('Preencha todos os campos obrigatórios');
+        return false;
+      }
+      // Validar email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        setError('Email inválido');
+        return false;
+      }
+    }
+    
+    if (currentStep === 2) {
+      if (!formData.formacao || !formData.dataAdmissao) {
+        setError('Preencha todos os campos obrigatórios');
+        return false;
+      }
+    }
+    
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Salvando professor:', formData);
-    alert(professor ? 'Professor atualizado com sucesso!' : 'Professor cadastrado com sucesso!');
-    onClose();
+    
+    if (!validarStep(3)) return;
+    
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Preparar dados para envio
+      const payload = {
+        nome: formData.nome,
+        email: formData.email,
+        telefone: formData.telefone,
+        cpf: formData.cpf,
+        rg: formData.rg,
+        data_nascimento: formData.dataNascimento,
+        sexo: formData.sexo,
+        
+        cep: formData.cep,
+        endereco: formData.endereco,
+        numero: formData.numero,
+        complemento: formData.complemento,
+        bairro: formData.bairro,
+        cidade: formData.cidade,
+        
+        data_admissao: formData.dataAdmissao,
+        registro_profissional: formData.registro,
+        formacao: formData.formacao,
+        especializacao: formData.especializacao,
+        carga_horaria: parseInt(formData.cargaHoraria.toString()),
+        turno: formData.turno,
+        status: formData.status,
+        salario: formData.salario ? parseFloat(formData.salario.toString()) : 0,
+        
+        disciplinas: formData.disciplinas,
+        turmas: formData.turmas
+      };
+      
+      await onSave(payload);
+    } catch (err: any) {
+      console.error('Erro ao salvar:', err);
+      setError(err.message || 'Erro ao salvar professor');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const nextStep = () => {
-    if (step < 3) setStep(step + 1);
+    if (validarStep(step)) {
+      if (step < 3) setStep(step + 1);
+    }
   };
 
   const prevStep = () => {
     if (step > 1) setStep(step - 1);
+    setError(null);
   };
 
   return (
@@ -85,7 +168,7 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
             <h3 className="text-xl font-bold text-gray-800">
               {professor ? 'Editar Professor' : 'Novo Professor'}
             </h3>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg" disabled={loading}>
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -111,6 +194,13 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
               </div>
             ))}
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -171,11 +261,10 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Data de Nascimento *
+                      Data de Nascimento
                     </label>
                     <input
                       type="date"
-                      required
                       value={formData.dataNascimento}
                       onChange={(e) => handleChange('dataNascimento', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -183,10 +272,9 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Sexo *
+                      Sexo
                     </label>
                     <select
-                      required
                       value={formData.sexo}
                       onChange={(e) => handleChange('sexo', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -249,15 +337,6 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
                       type="text"
                       value={formData.numero}
                       onChange={(e) => handleChange('numero', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Complemento</label>
-                    <input
-                      type="text"
-                      value={formData.complemento}
-                      onChange={(e) => handleChange('complemento', e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
@@ -395,7 +474,8 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
                         R$
                       </span>
                       <input
-                        type="text"
+                        type="number"
+                        step="0.01"
                         value={formData.salario}
                         onChange={(e) => handleChange('salario', e.target.value)}
                         placeholder="0,00"
@@ -448,22 +528,10 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
                 </div>
               </div>
 
-              <div>
-                <h4 className="font-medium text-gray-800 mb-3">Turmas (Opcional)</h4>
-                <p className="text-sm text-gray-600 mb-3">
-                  As turmas podem ser associadas posteriormente na gestão de turmas
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  💡 <strong>Dica:</strong> As turmas podem ser associadas posteriormente na gestão de turmas ou disciplinas.
                 </p>
-                <select
-                  multiple
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  size="5"
-                >
-                  <option>1º Ano A</option>
-                  <option>2º Ano A</option>
-                  <option>3º Ano B</option>
-                  <option>4º Ano C</option>
-                  <option>5º Ano A</option>
-                </select>
               </div>
             </div>
           )}
@@ -475,7 +543,8 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                  disabled={loading}
+                  className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                 >
                   Voltar
                 </button>
@@ -485,7 +554,8 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                disabled={loading}
+                className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -493,16 +563,25 @@ const CadastroProfessorModal = ({ professor, onClose }) => {
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                  disabled={loading}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
                 >
                   Próximo
                 </button>
               ) : (
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  disabled={loading}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center gap-2"
                 >
-                  {professor ? 'Atualizar Professor' : 'Cadastrar Professor'}
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Salvando...
+                    </>
+                  ) : (
+                    professor ? 'Atualizar Professor' : 'Cadastrar Professor'
+                  )}
                 </button>
               )}
             </div>
